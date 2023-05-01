@@ -1,3 +1,9 @@
 {
-    "hoyerIterations": 10
+    "n_h": 2,
+    "generations": 8,
+    "size": 6,
+    "k_out": 4,
+    "g_alpha": 0.75,
+    "lambda": 1.2,
+    "gamma": "gaussian"
 }
