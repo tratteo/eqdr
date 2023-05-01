@@ -1,0 +1,4 @@
+qiskit
+qiskit[visualization]
+yaspin
+tqdm
