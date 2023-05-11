@@ -1,37 +1,48 @@
-import json
+from multiprocessing import Process
+from typing import Callable, Union
 from qiskit import QuantumCircuit
-from qiskit.quantum_info import Statevector
-from qiskit.algorithms import AmplificationProblem
-from bbht import BBHT, BBHTResult
-from qiskit.primitives import Sampler
-from qiskit.circuit.library.phase_oracle import PhaseOracle
-from qiskit.visualization import plot_distribution
+from qiskit.quantum_info import Statevector, random_statevector
+from qiskit.circuit.library import *
 import math
-from random import choice
-from tqdm import tqdm
-from scipy.spatial.distance import hamming
-
-import multiprocessing as mp
-
 from eqiro import Eqiro
+from qiskit.visualization import *
+import csv
+import random
+import json
+from grover import execute_grover
+from oracles import multi_targets_oracle
+
+from utils import generate_binary_string, loadConfig
 
 
-def generate_binary_string(n):
-    return "".join(choice("01") for _ in range(n))
+def oracle_factory(
+    genome: str, fitness: float, size: int
+) -> Union[QuantumCircuit, Statevector]:
+    # return Statevector.from_label(genome)
+    list = []
+    for i in range(2**size):
+        list.append("0" if i % 2 == 0 else "1")
+    return Statevector(list)
 
 
-def loadConfig(path: str):
-    f = open(path)
-    data = json.load(f)
-    return data
+def fitness_function_factory(targets: list[str]) -> Callable[[str, int], float]:
+    def fitness_function(genome: str, size: int) -> float:
+        min_dist = math.inf
+        genome_val = int(genome, 2)
+        for t in targets:
+            v = int(t, 2)
+            d = abs(genome_val - v)
+            if d < min_dist:
+                min_dist = d
+        return min_dist
+        # if val % 2 == 0:
+        #     return math.inf
+        # a = (2**size) / 2
+        # if val - a == 0:
+        #     return 0
+        # return 1 - (math.sin(val - a) / (val - a))
 
-
-def oracle_factory(genome: str, fitness: float) -> QuantumCircuit | Statevector:
-    return Statevector.from_label(target)
-
-
-def fitness_function(genome: str) -> float:
-    return 0 if genome == target else 1
+    return fitness_function
 
 
 def distance(first: str, second: str) -> int:
@@ -45,62 +56,79 @@ def distance(first: str, second: str) -> int:
     return h
 
 
+def eqiro_run(config: any):
+    n = config["size"]
+    targets = config["targets"]
+    its = config["its"]
+    id = config["id"]
+    oracle = multi_targets_oracle(targets, n)
+    file_name = (
+        "eqiro_"
+        + ("recombined" if config["enable_recombination"] else "not_recombined")
+        + ".csv"
+    )
+    print(str(id) + " > recombine: " + str(config["enable_recombination"]))
+    count = 0
+    with open(file_name, "w", newline="") as file:
+        csvwriter = csv.writer(file)
+        csvwriter.writerow(["n", "avg_iterations", "avg_recombinations"])
+    eqiro = Eqiro(
+        oracle=oracle,
+        fitnessFunction=fitness_function_factory(targets),
+        genomeSize=n,
+        is_good_state=lambda x: x in targets,
+        verbosity=0,
+        **config,
+    )
+    iterations = 0
+    recombinations = 0
+    for j in range(its):
+        res = eqiro.optimize()
+        iterations += res.statistics["iterations"]
+        recombinations += res.statistics["recombinations"]
+        count += 1
+        print(str(id) + " > it: " + str(count) + "/" + str(its))
+    iterations /= its
+    recombinations /= its
+    with open(file_name, "a", newline="") as file:
+        csvwriter = csv.writer(file)
+        csvwriter.writerow([its, iterations, recombinations])
+
+
 if __name__ == "__main__":
     config = loadConfig("config/std.json")
     n = config["size"]
-    target = generate_binary_string(n)
-    print("configuration " + json.dumps(config))
-    h = 0
-    its = 10
-    correct = 0
-    for i in range(its):
-        eqiro = Eqiro(
-            oracleFactory=oracle_factory,
-            fitnessFunction=fitness_function,
-            genomeSize=n,
-            **config,
-            verbosity=0
-        )
-        res = eqiro.optimize()
-        print("-" * 50)
-        print("\ntarget: " + target)
-        print("proposed solution: " + res.solutions[0][0])
-        d = distance(target, res.solutions[0][0])
-        h += d
-        if d <= 0:
-            correct += 1
-    h /= its
-    print("_" * 100)
-    print(
-        "average hamming distance "
-        + str(h)
-        + ", success rate "
-        + str(100 * correct / its)
-        + "%"
-    )
-    # n = 6
+    targets = [generate_binary_string(n) for i in range(random.randint(1, n // 2))]
+    print(targets)
+    oracle = multi_targets_oracle(targets, n)
 
-    # its = 0
-    # sampleIts = 10
-    # print("Calculating average iterations")
-    # pbar = tqdm(range(sampleIts))
-    # for i in pbar:
-    #     target = generate_binary_string(n)
-    #     oracle = Statevector.from_label(target)
-    #     targets = [target]
-    #     bbht = BBHT(targets=targets, oracle=oracle)
-    #     result = bbht.amplify()
-    #     its += result.iterations
-    #     pbar.set_description(
-    #         "BBHT found "
-    #         + result.resultState
-    #         + " in "
-    #         + str(result.iterations)
-    #         + " iterations"
+    # if n < 8:
+    #     oracle.draw(output="bloch", filename="oracle.png")
+    # res = execute_grover(oracle, is_good_state=lambda x: x in targets)
+    # if n < 8:
+    #     plot_distribution(
+    #         res.circuit_results[0],
+    #         filename="plot.png",
+    #         figsize=(16, 9),
+    #         bar_labels=False,
     #     )
-    # print("N: " + str(n) + ", " + str(int(math.pow(2, n))) + " possible states")
-    # print(
-    #     "Theoretical upper bound iterations: "
-    #     + str(math.ceil(math.sqrt(math.pow(2, n) / len([1]))))
-    # )
-    # print("Empirical average iterations: " + str(its / sampleIts))
+    its = 100
+    config["targets"] = targets
+    config["its"] = its
+
+    c1 = json.loads(json.dumps(config))
+    c1["enable_recombination"] = True
+    c1["id"] = 0
+
+    c2 = json.loads(json.dumps(config))
+    c2["enable_recombination"] = False
+    c2["id"] = 1
+
+    t1 = Process(target=eqiro_run, args=[c1])
+    t2 = Process(target=eqiro_run, args=[c2])
+    t1.start()
+    t2.start()
+    t1.join()
+    t2.join()
+
+    print("_" * 100)

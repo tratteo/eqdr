@@ -1,9 +1,9 @@
 {
-    "n_h": 2,
-    "generations": 8,
-    "size": 6,
+    "size": 10,
     "k_out": 4,
-    "g_alpha": 0.75,
+    "g_alpha": 0.2,
+    "gamma_mul": 0.125,
+    "recombination_module": 3,
     "lambda": 1.2,
     "gamma": "gaussian"
 }

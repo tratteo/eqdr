@@ -1,5 +1,5 @@
 import math
-from typing import Callable
+from typing import Callable, Union
 from qiskit import QuantumCircuit, ClassicalRegister, transpile
 import random
 import numpy as np
@@ -10,8 +10,13 @@ from qiskit.algorithms import AmplificationProblem
 
 
 class EqiroResult:
-    def __init__(self, solutions: list[tuple[str, float]]) -> None:
+    def __init__(
+        self,
+        solutions: "list[tuple[str, float]]",
+        statistics: any,
+    ) -> None:
         self.solutions: list[tuple[str, float]] = solutions
+        self.statistics = statistics
 
 
 class Eqiro:
@@ -23,45 +28,100 @@ class Eqiro:
 
     def __init__(
         self,
-        oracleFactory: Callable[[str, float], QuantumCircuit | Statevector],
-        fitnessFunction: Callable[[str], float],
+        oracle: Union[QuantumCircuit, Statevector],
+        fitnessFunction: Callable[[str, int], float],
         genomeSize: int,
-        **kwargs
+        is_good_state=Callable[[str], bool],
+        **kwargs,
     ) -> None:
-        self._oracleFactory = oracleFactory
+        self._problem = AmplificationProblem(oracle=oracle)
         self._fitnessFunction = fitnessFunction
         self._aerSim = AerSimulator()
+        self._is_good_state = is_good_state
         self._verbosity = kwargs.get("verbosity", 1)
         self._gamma = self._getGamma(kwargs.get("gamma", "identity"))
         self._lambda = kwargs.get("lambda", 4 / 3)
         self._genomeSize = genomeSize
-        self._generations = kwargs.get("generations", 16)
-        self._k_in = kwargs.get("k_in", 4)
+        self._gamma_mul = kwargs.get("gamma_mul", 1)
+        self._recombination_module = kwargs.get("recombination_module", 1)
+        self._max_iter = kwargs.get("max_iterations", math.inf)
+        self._recombine = kwargs.get("enable_recombination", True)
         self._k_out = kwargs.get("k_out", 4)
         self._g_alpha = kwargs.get("g_alpha", 0.5)
-        self._hoyerIterations = kwargs.get("n_h", 2)
 
     def _generate_binary_string(self, n):
         return "".join(random.choice("01") for _ in range(n))
 
     def optimize(self) -> EqiroResult:
         b_out: list[tuple[str, float]] = []
-        generationsSolutions = []
-        for g in range(self._generations):
-            solution = self._amplify(b_out=b_out)
+        solutions = []
+        recombinations = 0
+        count = 0
+        m = 1
+        while count < self._max_iter:
+            power = random.randint(1, m)
+
+            should_recombine = (
+                self._recombine
+                and len(b_out) >= self._k_out
+                and (count - self._k_out) % self._recombination_module == 0
+            )
+            recombinations += 1 if should_recombine else 0
+
+            # Run a grover experiment for a given power of the Grover operator.
+            qc = self.construct_circuit(
+                self._problem,
+                power,
+                b_out=b_out,
+                should_recombine=should_recombine,
+                measurement=True,
+            )
+
+            result = self._aerSim.run(transpile(qc, self._aerSim), shots=1).result()
+            measured = list(result.get_counts().keys())[0]
+
             if self._verbosity > 1:
-                print("\ngeneration " + str(g))
-                print("solution: " + str(solution))
-            if len(b_out) >= self._k_out:
+                print(
+                    "amplitude amplification, m: "
+                    + str(m)
+                    + ", measured: "
+                    + str(measured)
+                )
+            fitness = self._fitnessFunction(measured, self._genomeSize)
+
+            if self._verbosity > 0:
+                print("\niteration " + str(count))
+                print("measured " + str(measured))
+                print("fitness " + str(fitness))
+
+            b_out.append([measured, fitness])
+            if len(b_out) > self._k_out:
                 b_out.sort(key=lambda x: x[1])
                 b_out.pop()
-            b_out.append(solution)
-            generationsSolutions.append(solution)
 
-        generationsSolutions.sort(key=lambda x: x[1])
-        return EqiroResult(solutions=generationsSolutions)
+            solutions.append([measured, fitness])
+            solutions.sort(key=lambda x: x[1])
+            if len(solutions) > 10:
+                solutions.pop()
 
-    def calculate_angles(self, b: list[tuple[str, float]]) -> list[float]:
+            count += 1
+            if self._is_good_state is not None and self._is_good_state(measured):
+                break
+
+            m = math.ceil(
+                min(
+                    self._lambda * m,
+                    math.sqrt(math.pow(2, len(self._problem.objective_qubits))),
+                )
+            )
+
+        solutions.sort(key=lambda x: x[1])
+        return EqiroResult(
+            solutions=solutions,
+            statistics={"iterations": count, "recombinations": recombinations},
+        )
+
+    def calculate_angles(self, b: "list[tuple[str, float]]") -> "list[float]":
         angles = [0] * self._genomeSize
         c = math.pi / len(b)
         b.sort(key=lambda x: x[1])
@@ -70,11 +130,14 @@ class Eqiro:
             for k in range(len(b)):
                 current = b[k][0]
                 gamma = self._gamma(
-                    self._fitnessFunction(current), k, a=self._g_alpha, k=len(b)
+                    self._fitnessFunction(current, self._genomeSize),
+                    k,
+                    a=self._g_alpha,
+                    k=len(b),
                 )
                 if self._verbosity > 1:
                     print("computed gamma " + str(gamma))
-                theta += int(current[i]) * gamma
+                theta += int(current[i]) * gamma * self._gamma_mul
             angles[i] = theta * c
         return angles
 
@@ -82,30 +145,31 @@ class Eqiro:
         self,
         problem: AmplificationProblem,
         power: int,
-        b_in: list[tuple[str, float]],
-        b_out: list[tuple[str, float]],
+        b_out: "list[tuple[str, float]]",
+        should_recombine: bool,
         measurement: bool = False,
     ) -> QuantumCircuit:
         qc = QuantumCircuit(problem.oracle.num_qubits, name="Grover circuit")
         qc.compose(problem.state_preparation, inplace=True)
         qc.compose(problem.grover_operator.power(power), inplace=True)
 
-        angles = [0] * self._genomeSize
-        # if len(b_in) >= self._k_in:
-        #     angles = [sum(x) for x in zip(angles, self.calculate_angles(b_in))]
-        #     # print("b_in: " + str(b_in))
-        #     # print("applying b_in angles " + str(angles))
-        #     b_in.clear()
+        if should_recombine:
+            angles = [0] * self._genomeSize
+            # if len(b_in) >= self._k_in:
+            #     angles = [sum(x) for x in zip(angles, self.calculate_angles(b_in))]
+            #     # print("b_in: " + str(b_in))
+            #     # print("applying b_in angles " + str(angles))
+            #     b_in.clear()
 
-        if len(b_out) >= self._k_out:
-            angles = [sum(x) for x in zip(angles, self.calculate_angles(b_out))]
-            if self._verbosity >= 1:
-                print("b_out array " + str(b_out))
-                print("applying b_out angles " + str(angles))
+            if len(b_out) >= self._k_out:
+                angles = [sum(x) for x in zip(angles, self.calculate_angles(b_out))]
+                if self._verbosity >= 1:
+                    print("b_out array " + str(b_out))
+                    print("applying b_out angles " + str(angles))
 
-        for a in range(len(angles)):
-            if angles[a] != 0:
-                qc.ry(angles[a], a)
+            for a in range(len(angles)):
+                if angles[a] != 0:
+                    qc.ry(angles[a], a)
 
         if measurement:
             measurement_cr = ClassicalRegister(len(problem.objective_qubits))
@@ -113,50 +177,6 @@ class Eqiro:
             qc.measure(problem.objective_qubits, measurement_cr)
         # qc.draw(output="mpl", filename="circuit.png")
         return qc
-
-    def _amplify(self, b_out: list[tuple[str, float]]) -> tuple[str, float]:
-        y = self._generate_binary_string(self._genomeSize)
-        fy = self._fitnessFunction(y)
-        oracle = self._oracleFactory(y, fy)
-        problem = AmplificationProblem(oracle=oracle)
-        m = 1
-        for _ in range(self._hoyerIterations):
-            b_in = []
-            i = random.randint(1, m)
-            power = i
-            # Run a grover experiment for a given power of the Grover operator.
-            qc = self.construct_circuit(
-                problem, power, b_in=b_in, b_out=b_out, measurement=True
-            )
-
-            result = self._aerSim.run(transpile(qc, self._aerSim), shots=1).result()
-            measured = list(result.get_counts().keys())[0]
-            if self._verbosity > 1:
-                print(
-                    "amplitude amplification, m: "
-                    + str(m)
-                    + ", measured: "
-                    + str(measured)
-                )
-            fitness = self._fitnessFunction(measured)
-            b_in.append([measured, fitness])
-
-            if fitness < fy:
-                y = measured
-                if self._verbosity >= 1:
-                    print("better solution found: " + measured)
-                fy = fitness
-                oracle = self._oracleFactory(y, fy)
-                problem = AmplificationProblem(oracle=oracle)
-                break
-            m = math.ceil(
-                min(
-                    self._lambda * m,
-                    math.sqrt(math.pow(2, len(problem.objective_qubits))),
-                )
-            )
-
-        return [y, fy]
 
     def _getGamma(self, id: str) -> Callable[[float, int], float]:
         if id == "poly":
