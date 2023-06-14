@@ -2,3 +2,4 @@ qiskit
 qiskit[visualization]
 yaspin
 tqdm
+qiskit-ibm-provider
