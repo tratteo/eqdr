@@ -13,7 +13,7 @@ def square_fitness(genome: str, size: int) -> float:
     return val * val
 
 
-def targets_fitness_factory(targets: list[str]) -> Callable[[str, int], float]:
+def targets_fitness_factory(targets: "list[str]") -> Callable[[str, int], float]:
     def fitness_function(genome: str, size: int) -> float:
         min_dist = math.inf
         genome_val = int(genome, 2)

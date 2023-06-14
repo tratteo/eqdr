@@ -253,7 +253,7 @@ class Eqiro:
         power: int,
         b_out: "list[tuple[str, float]]",
         iteration: int,
-    ) -> tuple[QuantumCircuit, bool]:
+    ) -> "tuple[QuantumCircuit, bool]":
         shouldRecombine = (
             self.recombine
             and len(b_out) >= self.kOut

@@ -19,7 +19,7 @@ def run_experiment(name: str):
         targets_experiment()
 
 
-def execute_eqiro_experiment(name: str, config: any, workers: list[any]):
+def execute_eqiro_experiment(name: str, config: any, workers: "list[any]"):
     root = os.path.join("results", name)
     if not os.path.exists(root):
         os.makedirs(root)

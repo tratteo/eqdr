@@ -1,3 +1,4 @@
+from ctypes import Union
 import math
 from typing import Callable
 from qiskit.algorithms import AmplificationProblem
@@ -13,7 +14,9 @@ import time
 
 def execute_grover(
     oracle: any,
-    is_good_state: Callable[[str], bool] | list[int] | list[str] | Statevector | None,
+    is_good_state: Union[
+        Callable[[str], bool], "list[int]", "list[str]", Statevector, None
+    ],
 ):
     start_time = time.time_ns()
     problem = AmplificationProblem(oracle, is_good_state=is_good_state)

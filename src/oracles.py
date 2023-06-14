@@ -15,7 +15,7 @@ def oracles_factory(oracleId: str, **kwargs):
         return multi_targets_oracle(targets, n)
 
 
-def multi_targets_oracle(targets: list[str], n: int) -> Statevector:
+def multi_targets_oracle(targets: "list[str]", n: int) -> Statevector:
     encoding = []
     for i in range(2**n):
         bit_str = "{0:b}".format(i).zfill(n)
