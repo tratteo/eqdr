@@ -8,6 +8,14 @@ def sin_fitness(genome: str, size: int) -> float:
     return math.sin(k * val) / math.exp(0.1 * val)
 
 
+def multimodal_fitness(genome: str, size: int) -> float:
+    val = int(genome, 2)
+    k = size
+    numerator = k * math.tanh(((val - k) ** 2) / (2**k))
+    denominator = math.cos(k * (val - k)) + 2
+    return numerator / denominator
+
+
 def binary_knapsack_fitness_factory(
     weights: "list[float]", max_weight: float, prices: "list[float]"
 ):
@@ -55,6 +63,8 @@ def fitness_factory(**kwargs):
     fitnessId = kwargs["function"].lower()
     if fitnessId == "sin":
         return sin_fitness
+    elif fitnessId == "multimodal":
+        return multimodal_fitness
     elif fitnessId == "targets":
         return targets_fitness_factory(kwargs["targets"])
     elif fitnessId == "square":

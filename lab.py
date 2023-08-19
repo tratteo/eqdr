@@ -24,6 +24,13 @@ def g_g(x):
     return np.exp((np.power(x, 2) * np.log(alpha)) / 16)
 
 
+def multimodal_fitness(val, size: int) -> float:
+    k = size
+    numerator = k * np.tanh(((val - k) ** 2) / (2**k))
+    denominator = np.cos(k * (val - k)) + 2
+    return numerator / denominator
+
+
 import random
 
 # bits = [[-1, -1, +1, -1], [-1, -1, +1, +1], [-1, +1, +1, +1]]
@@ -71,23 +78,24 @@ import random
 # sv.draw(output="bloch", filename="s.png")
 # sv = Statevector([0, 1])
 # sv.draw(output="bloch", filename="s1.png")
-x = np.linspace(0, 4, 1000)
-y = g_p(x)
-z = g_g(x)
-plt.plot(x, y, color=(1, 0, 0, 1), label=r"$\gamma_p$")
-plt.plot(x, z, color=(0, 0, 1, 1), label=r"$\gamma_g$")
-plt.legend()
+size = 8
+x = np.linspace(0, size * 3, 1000)
+y = multimodal_fitness(x, size)
+plt.figure(figsize=(16, 9))
+plt.plot(x, y, color=(0, 0.5, 1, 1))
+plt.axvline(x=size, color="r", linestyle="dotted")
+plt.xticks(np.arange(0, (size + 1) * 3, step=1))
 # plt.legend([r"\TeX\ \gamma", "gaussian"])
-plt.savefig("functions.svg")
+plt.savefig(r"C:\Users\matteo\Documents\UniTn\Tesi\assets\multimodal_8.svg")
 plt.show()
-qc = QuantumCircuit(2)
-qc.h(0)
-qc.cx(0, 1)
-# qc.h(1)
-# qc.measure_all()
-qc.decompose("cx").draw(
-    filename="h.png",
-    output="mpl",
-    plot_barriers=False,
-    initial_state=False,
-)
+# qc = QuantumCircuit(2)
+# qc.h(0)
+# qc.cx(0, 1)
+# # qc.h(1)
+# # qc.measure_all()
+# qc.decompose("cx").draw(
+#     filename="h.png",
+#     output="mpl",
+#     plot_barriers=False,
+#     initial_state=False,
+# )

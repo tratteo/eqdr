@@ -24,23 +24,26 @@ def eqdr_run(config: any):
     with open(reportFileName, "w", newline="") as file:
         csvwriter = csv.writer(file)
         csvwriter.writerow(
-            ["n", "avg_iterations", "avg_recombinations", "avg_fitness_calls"]
+            [
+                "n",
+                "iterations",
+                "recombinations",
+                "avg_iterations",
+                "avg_recombinations",
+            ]
         )
     eqiro = Eqdr(
         oracleImp=oracle,
         fitnessFunctionImp=fitness_function,
         isGoodState=lambda x: x in targets if targets is not None else None,
-        verbosity=0,
         **config,
     )
     iterations = 0
     recombinations = 0
-    fitnessCalls = 0
     for j in range(its):
         res = eqiro.optimize()
         iterations += res.statistics["iterations"]
         recombinations += res.statistics["recombinations"]
-        fitnessCalls += res.statistics["fitness_calls"]
         count += 1
         print(
             prefix
@@ -52,9 +55,17 @@ def eqdr_run(config: any):
             + " - "
             + str({"avg_it": iterations / (j + 1), "avg_rec": recombinations / (j + 1)})
         )
-    iterations /= its
-    fitnessCalls /= its
-    recombinations /= its
-    with open(reportFileName, "a", newline="") as file:
-        csvwriter = csv.writer(file)
-        csvwriter.writerow([its, iterations, recombinations, fitnessCalls])
+        with open(reportFileName, "a", newline="") as file:
+            csvwriter = csv.writer(file)
+            csvwriter.writerow(
+                [
+                    j,
+                    res.statistics["iterations"],
+                    res.statistics["recombinations"],
+                    iterations / (j + 1),
+                    recombinations / (j + 1),
+                ]
+            )
+    # iterations /= its
+    # fitnessCalls /= its
+    # recombinations /= its

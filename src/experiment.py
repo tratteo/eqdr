@@ -3,7 +3,7 @@ from multiprocessing import Process
 import os
 import random
 
-from src.eqdr.eqdr import eqdr_run
+from src.eqdr.eqdr_run import eqdr_run
 
 
 def execute_eqiro_experiment(name: str, workers: "list[any]"):

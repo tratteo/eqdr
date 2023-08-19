@@ -25,9 +25,8 @@ class Eqdr:
 
         self.backend = Aer.get_backend("qasm_simulator") if backend is None else backend
         # self.backend.set_options(device="GPU")
-        self.verbosity = kwargs.get("verbosity", 1)
+        self.verbosity = kwargs.get("verbosity", 0)
         self.lmbd = kwargs.get("lambda", 1.2)
-        self.maximize = kwargs.get("maximize", False)
         self.maxIter = kwargs.get("max_iterations", math.inf)
 
         self.recombinationProb = kwargs.get("recombination", {}).get("prob", 0.1)
@@ -35,13 +34,14 @@ class Eqdr:
         self.recombine = kwargs.get("recombination", {}).get("enabled", True)
         self.mutateProb = kwargs.get("recombination", {}).get("mutate_prob", 0.1)
         self.kOut = kwargs.get("recombination", {}).get("k_out", self.genomeSize // 2)
-        self.uniformRecombine = kwargs.get("recombination", {}).get("uniform", False)
-        self.increasedRecombinationProb = kwargs.get("recombination", {}).get(
-            "increased_prob", 0.75
-        )
+        self.recombination = kwargs.get("recombination", {}).get("type", "uniform")
+        self.maximize = kwargs.get("maximize", False)
+        self.recombinationArgs = kwargs.get("recombination", {})
 
-        self.gamma = self._getGamma(kwargs.get("gamma", {}).get("function", "poly"))
-        self.gAlpha = kwargs.get("gamma", {}).get("alpha", 0.5)
+        self.gamma = self._getGamma(
+            kwargs.get("recombination", {}).get("gamma", {}).get("function", "poly")
+        )
+        self.gAlpha = kwargs.get("recombination", {}).get("gamma", {}).get("alpha", 0.5)
 
         self.fitnessThreshold = kwargs.get("fitness", {}).get("threshold", None)
         self.targetFitness = kwargs.get("fitness", {}).get("target", None)
@@ -71,20 +71,16 @@ class Eqdr:
         iteration = 0
         fitnessCalls = 0
         recombinationIndex = 0
-        increaseMutate = False
         m = 1
         while iteration < self.maxIter:
             qc, recombined = self.construct_circuit(
                 power=random.randint(1, m),
                 b_out=b_out,
-                recombineProb=self.increasedRecombinationProb
-                if increaseMutate
-                else math.tanh(iteration / (self.genomeSize**2))
+                recombineProb=math.tanh(iteration / (self.genomeSize**2))
                 * (self.recombinationProb),
             )
             if recombined:
                 recombinations += 1 if recombined else 0
-                increaseMutate = False
 
             result = execute(qc, self.backend, shots=1).result()
             # print(result.get_counts())
@@ -110,8 +106,6 @@ class Eqdr:
 
             if next(filter(lambda x: x[0] == measured, b_out), None) is None:
                 b_out.append([measured, fitness])
-                if self.is_fitness_better(fitness, b_out[0][1]):
-                    increaseMutate = True
                 if len(b_out) > self.kOut:
                     b_out.sort(key=lambda x: x[1], reverse=self.maximize)
                     b_out.pop()
@@ -151,18 +145,43 @@ class Eqdr:
             },
         )
 
+    def prob_pick(self, elems: "list[float]") -> int:
+        elems = sorted(elems)
+        r = random.random()
+        count = 0
+        while r > 0 and count < len(elems):
+            r -= elems[count]
+            count += 1
+        return min(count, len(elems) - 1)
+
     def compute_diffusions_bits(
         self, b: "list[tuple[str, float]]"
     ) -> "tuple[list[str], list[float]]":
-        bits = [0] * self.genomeSize
-        b.sort(key=lambda x: x[1])
-        for i in range(self.genomeSize):
-            gc = []
-            if self.uniformRecombine:
-                rand_index = random.randint(0, len(b) - 1)
-                current = b[rand_index]
-                bits[i] += -1 if current[0][i] == "0" else 1
+        diffusion_v = []
+        accuracy_v = []
+        uniform_accuracy = self.recombinationArgs.get("uniform_accuracy", 0.5)
+        if self.recombination == "uniform":
+            for i in range(self.genomeSize):
+                diffusion_v.append(b[random.randint(0, len(b) - 1)][0][i])
+                accuracy_v.append(uniform_accuracy)
+        elif self.recombination == "proportional":
+            m = max(b, key=lambda x: x[1])
+            epsilon = 0.1
+            if not self.maximize:
+                remapped = [(epsilon + 1) * m[1] - f[1] for f in b]
             else:
+                remapped = [(epsilon + 1) * m[1] + f[1] for f in b]
+            s = sum(remapped)
+            probabilities = [f / s for f in remapped]
+            index = self.prob_pick(probabilities)
+            for i in range(self.genomeSize):
+                diffusion_v.append(b[index][0][i])
+                accuracy_v.append(uniform_accuracy)
+        elif self.recombination == "contribution":
+            bits = [0] * self.genomeSize
+            b.sort(key=lambda x: x[1], reverse=self.maximize)
+            for i in range(self.genomeSize):
+                gc = []
                 max_gamma = 0
                 for k in range(len(b)):
                     current = b[k]
@@ -174,17 +193,17 @@ class Eqdr:
                     )
                     gc.append(g)
                     bits[i] += (-1 if current[0][i] == "0" else 1) * g
-        res = ["0" if a < 0 else "1" for a in bits]
-        max_gamma = sum(gc)
-        acc = [abs(a) for a in bits]
-        acc = [a / max_gamma for a in acc]
+                diffusion_v = ["0" if a < 0 else "1" for a in bits]
+                max_gamma = sum(gc)
+                accuracy_v = [abs(a) for a in bits]
+                accuracy_v = [a / max_gamma for a in accuracy_v]
+
         if self.verbosity > 1:
-            print("\n", flush=True)
-            print("gamma > " + str(gc), flush=True)
+            print("\ntype > " + str(self.recombination), flush=True)
             print("b > " + str(b), flush=True)
-            print("contributions > " + str(bits), flush=True)
-            print("res > " + str(res), flush=True)
-        return res, acc
+            print("diffusion > " + str(diffusion_v), flush=True)
+            print("accuracy > " + str(accuracy_v), flush=True)
+        return diffusion_v, accuracy_v
 
     def construct_circuit(
         self,
@@ -257,7 +276,7 @@ class Eqdr:
         measurement_cr = ClassicalRegister(self.genomeSize)
         qc.add_register(measurement_cr)
         m = [i for i in range(self.genomeSize)]
-        qc.measure(m, reversed(m))
+        qc.measure(m, m)
         # qc.measure(problem.objective_qubits, measurement_cr)
         # qc.decompose(reps=2, gates_to_decompose=["Q"]).draw(
         #     filename="eqdrtot.png",
