@@ -3,66 +3,141 @@ import sys
 from src.experiment import execute_eqiro_experiment
 
 
-iterations = 200
+iterations = 100
 
 
-def knapsack(id: str):
+def knapsack_7(id: str):
+    size = 7
+    fitness = {
+        "function": "binary_knapsack",
+        "threshold": 0,
+        "target": 107,
+        "prices": [70, 20, 39, 37, 7, 5, 10],
+        "weights": [31, 10, 20, 19, 4, 3, 6],
+        "max_weight": 50,
+    }
+    oracle = {
+        "operator": "pattern",
+        "expression": "1*0*0*1",
+    }
+    lmbd = 1.2
     execute_eqiro_experiment(
         id,
         [
+            # {
+            #     "name": "not_recombined",
+            #     "config": {
+            #         "size": size,
+            #         "maximize": True,
+            #         "lambda": lmbd,
+            #         "iterations": iterations,
+            #         "fitness": fitness,
+            #         "oracle": oracle,
+            #         "recombination": {
+            #             "enabled": False,
+            #         },
+            #     },
+            # },
+            # {
+            #     "name": "diffusion_ud",
+            #     "config": {
+            #         "size": size,
+            #         "maximize": True,
+            #         "lambda": lmbd,
+            #         "iterations": iterations,
+            #         "fitness": fitness,
+            #         "oracle": oracle,
+            #         "recombination": {
+            #             "k_out": size,
+            #             "prob": 0.8,
+            #             "enabled": True,
+            #             "type": "uniform",
+            #             "uniform_accuracy": 0.35,
+            #             "mutate_prob": 0.75,
+            #             "mutate_factor": 0.15,
+            #         },
+            #     },
+            # },
+            # {
+            #     "name": "diffusion_spd",
+            #     "config": {
+            #         "size": size,
+            #         "maximize": True,
+            #         "lambda": lmbd,
+            #         "iterations": iterations,
+            #         "fitness": fitness,
+            #         "oracle": oracle,
+            #         "recombination": {
+            #             "k_out": size,
+            #             "prob": 0.8,
+            #             "enabled": True,
+            #             "type": "proportional",
+            #             "uniform_accuracy": 0.35,
+            #             "mutate_prob": 0.75,
+            #             "mutate_factor": 0.15,
+            #         },
+            #     },
+            # },
             {
-                "name": "not_recombined",
+                "name": "rcd",
                 "config": {
-                    "size": 7,
+                    "size": size,
                     "maximize": True,
-                    "iterations": 50,
-                    "fitness": {
-                        "function": "binary_knapsack",
-                        "threshold": 0,
-                        "target": 107,
-                        "prices": [70, 20, 39, 37, 7, 5, 10],
-                        "weights": [31, 10, 20, 19, 4, 3, 6],
-                        "max_weight": 50,
-                    },
-                    "oracle": {
-                        "operator": "pattern",
-                        "expression": "1*0*0*1",
-                    },
+                    "lambda": lmbd,
+                    "iterations": iterations,
+                    "fitness": fitness,
+                    "oracle": oracle,
                     "recombination": {
-                        "enabled": False,
+                        "k_out": 14,
+                        "prob": 0.8,
+                        "enabled": True,
+                        "type": "contribution",
+                        "gamma": {
+                            "function": "gaussian",
+                            "alpha": 0.15,
+                        },
+                        "mutate_prob": 0.4,
+                        "mutate_factor": 0.15,
                     },
                 },
             },
             {
-                "name": "diffusion_recombined_poly",
+                "name": "spd",
                 "config": {
-                    "size": 7,
+                    "size": size,
                     "maximize": True,
-                    "iterations": 50,
-                    "fitness": {
-                        "function": "binary_knapsack",
-                        "threshold": 0,
-                        "target": 107,
-                        "prices": [70, 20, 39, 37, 7, 5, 10],
-                        "weights": [31, 10, 20, 19, 4, 3, 6],
-                        "max_weight": 50,
-                    },
-                    "oracle": {
-                        "operator": "pattern",
-                        "expression": "1*0*0*1",
-                    },
-                    # "gamma": {
-                    #     "function": "gaussian",
-                    #     "alpha": 0.2,
-                    # },
+                    "lambda": lmbd,
+                    "iterations": iterations,
+                    "fitness": fitness,
+                    "oracle": oracle,
                     "recombination": {
                         "k_out": 7,
-                        "prob": 0.65,
+                        "prob": 0.8,
+                        "enabled": True,
+                        "type": "proportional",
+                        "uniform_accuracy": 0.5,
+                        "mutate_prob": 0.4,
+                        "mutate_factor": 0.15,
+                    },
+                },
+            },
+            {
+                "name": "ud",
+                "config": {
+                    "size": size,
+                    "maximize": True,
+                    "lambda": lmbd,
+                    "iterations": iterations,
+                    "fitness": fitness,
+                    "oracle": oracle,
+                    "recombination": {
+                        "k_out": 7,
+                        "prob": 0.8,
                         "enabled": True,
                         "type": "uniform",
-                        "args": {"uniform_accuracy": 0.45},
-                        "mutate_prob": 0.225,
-                        "mutate_factor": 0.2,
+                        "uniform_accuracy": 0.5,
+                        "mutate_prob": 0.4,
+                        "mutate_factor": 0.15,
                     },
                 },
             },
@@ -78,7 +153,7 @@ def square_recombination(id: str):
                 "name": "square_contribution",
                 "config": {
                     "size": 8,
-                    "iterations": 50,
+                    "iterations": iterations,
                     "fitness": {
                         "function": "square",
                         "threshold": 0.01,
@@ -86,18 +161,18 @@ def square_recombination(id: str):
                     },
                     "oracle": {
                         "operator": "pattern",
-                        "expression": "***01***",
+                        "expression": "*****000",
                     },
                     "recombination": {
                         "k_out": 14,
-                        "prob": 0.65,
+                        "prob": 0.75,
                         "enabled": True,
                         "gamma": {
                             "function": "gaussian",
-                            "alpha": 0.175,
+                            "alpha": 0.1,
                         },
                         "type": "contribution",
-                        "mutate_prob": 0.5,
+                        "mutate_prob": 0.25,
                         "mutate_factor": 0.125,
                     },
                 },
@@ -106,7 +181,7 @@ def square_recombination(id: str):
                 "name": "square_uniform",
                 "config": {
                     "size": 8,
-                    "iterations": 50,
+                    "iterations": iterations,
                     "fitness": {
                         "function": "square",
                         "threshold": 0.01,
@@ -114,15 +189,15 @@ def square_recombination(id: str):
                     },
                     "oracle": {
                         "operator": "pattern",
-                        "expression": "***01***",
+                        "expression": "*****000",
                     },
                     "recombination": {
-                        "k_out": 14,
-                        "prob": 0.65,
+                        "k_out": 4,
+                        "prob": 0.75,
                         "type": "uniform",
                         "enabled": True,
-                        "uniform_accuracy": 0.5,
-                        "mutate_prob": 0.5,
+                        "uniform_accuracy": 0.75,
+                        "mutate_prob": 0.25,
                         "mutate_factor": 0.125,
                     },
                 },
@@ -131,7 +206,7 @@ def square_recombination(id: str):
                 "name": "square_proportional",
                 "config": {
                     "size": 8,
-                    "iterations": 50,
+                    "iterations": iterations,
                     "fitness": {
                         "function": "square",
                         "threshold": 0.01,
@@ -139,113 +214,15 @@ def square_recombination(id: str):
                     },
                     "oracle": {
                         "operator": "pattern",
-                        "expression": "***01***",
+                        "expression": "*****000",
                     },
                     "recombination": {
-                        "k_out": 14,
-                        "prob": 0.65,
+                        "k_out": 4,
+                        "prob": 0.75,
                         "type": "proportional",
                         "enabled": True,
-                        "uniform_accuracy": 0.5,
-                        "mutate_prob": 0.5,
-                        "mutate_factor": 0.125,
-                    },
-                },
-            },
-        ],
-    )
-
-
-def multimodal_recombination(id: str):
-    execute_eqiro_experiment(
-        id,
-        [
-            {
-                "name": "multimodal_contribution",
-                "config": {
-                    "size": 7,
-                    "maximize": True,
-                    "iterations": 50,
-                    "fitness": {
-                        "function": "binary_knapsack",
-                        "threshold": 0,
-                        "target": 107,
-                        "prices": [70, 20, 39, 37, 7, 5, 10],
-                        "weights": [31, 10, 20, 19, 4, 3, 6],
-                        "max_weight": 50,
-                    },
-                    "oracle": {
-                        "operator": "pattern",
-                        "expression": "1*0*0*1",
-                    },
-                    "recombination": {
-                        "k_out": 7,
-                        "gamma": {
-                            "function": "gaussian",
-                            "alpha": 0.15,
-                        },
-                        "prob": 0.65,
-                        "enabled": True,
-                        "type": "contribution",
-                        "mutate_prob": 0.5,
-                        "mutate_factor": 0.125,
-                    },
-                },
-            },
-            {
-                "name": "multimodal_uniform",
-                "config": {
-                    "size": 7,
-                    "maximize": True,
-                    "iterations": 50,
-                    "fitness": {
-                        "function": "binary_knapsack",
-                        "threshold": 0,
-                        "target": 107,
-                        "prices": [70, 20, 39, 37, 7, 5, 10],
-                        "weights": [31, 10, 20, 19, 4, 3, 6],
-                        "max_weight": 50,
-                    },
-                    "oracle": {
-                        "operator": "pattern",
-                        "expression": "1*0*0*1",
-                    },
-                    "recombination": {
-                        "k_out": 7,
-                        "prob": 0.65,
-                        "enabled": True,
-                        "type": "uniform",
-                        "uniform_accuracy": 0.5,
-                        "mutate_prob": 0.5,
-                        "mutate_factor": 0.125,
-                    },
-                },
-            },
-            {
-                "name": "multimodal_proportional",
-                "config": {
-                    "size": 7,
-                    "maximize": True,
-                    "iterations": 50,
-                    "fitness": {
-                        "function": "binary_knapsack",
-                        "threshold": 0,
-                        "target": 107,
-                        "prices": [70, 20, 39, 37, 7, 5, 10],
-                        "weights": [31, 10, 20, 19, 4, 3, 6],
-                        "max_weight": 50,
-                    },
-                    "oracle": {
-                        "operator": "pattern",
-                        "expression": "1*0*0*1",
-                    },
-                    "recombination": {
-                        "k_out": 7,
-                        "prob": 0.65,
-                        "enabled": True,
-                        "type": "proportional",
-                        "uniform_accuracy": 0.5,
-                        "mutate_prob": 0.5,
+                        "uniform_accuracy": 0.75,
+                        "mutate_prob": 0.25,
                         "mutate_factor": 0.125,
                     },
                 },
@@ -428,109 +405,177 @@ def parameters_variations(id: str):
     )
 
 
-def multimodal(id: str):
+def rastrigin(id: str):
+    size = 8
+    fitness = {
+        "function": "rastrigin",
+        "threshold": 1e-3,
+        "target": 0,
+    }
+    oracle = {
+        "operator": "pattern",
+        "expression": "**001000",
+    }
+    lmbd = 1.2
     execute_eqiro_experiment(
         id,
         [
             {
-                "name": "not_recombined",
-                "lambda": 1.2,
+                "name": "bbht",
                 "config": {
-                    "size": 8,
+                    "size": size,
+                    "lambda": lmbd,
                     "iterations": iterations,
-                    "fitness": {
-                        "function": "multimodal",
-                        "threshold": 1e-3,
-                        "target": 0,
-                    },
-                    "oracle": {
-                        "operator": "pattern",
-                        "expression": "****10**",
-                    },
+                    "fitness": fitness,
+                    "oracle": oracle,
                     "recombination": {
                         "enabled": False,
                     },
                 },
             },
             {
-                "name": "recombined",
-                "lambda": 1.2,
+                "name": "eqdr_rcd",
                 "config": {
-                    "size": 8,
+                    "size": size,
+                    "lambda": lmbd,
                     "iterations": iterations,
-                    "fitness": {
-                        "function": "multimodal",
-                        "threshold": 1e-3,
-                        "target": 0,
-                    },
-                    "oracle": {
-                        "operator": "pattern",
-                        "expression": "****10**",
-                    },
+                    "fitness": fitness,
+                    "oracle": oracle,
                     "recombination": {
-                        "k_out": 16,
-                        "prob": 0.55,
+                        "enabled": True,
+                        "k_out": int(size * 1.5),
+                        "prob": 0.6,
                         "gamma": {
                             "function": "gaussian",
-                            "alpha": 0.175,
+                            "alpha": 0.2,
                         },
                         "type": "contribution",
-                        "enabled": True,
                         "mutate_prob": 0.3,
-                        "mutate_factor": 0.125,
+                        "mutate_factor": 0.2,
                     },
                 },
             },
-            # {
-            #     "name": "not_recombined_betteroracle",
-            #     "lambda": 1.2,
-            #     "config": {
-            #         "size": 8,
-            #         "iterations": iterations,
-            #         "fitness": {
-            #             "function": "multimodal",
-            #             "threshold": 1e-3,
-            #             "target": 0,
-            #         },
-            #         "oracle": {
-            #             "operator": "pattern",
-            #             "expression": "00**1000",
-            #         },
-            #         "recombination": {
-            #             "enabled": False,
-            #         },
-            #     },
-            # },
-            # {
-            #     "name": "recombined_betteroracle",
-            #     "lambda": 1.2,
-            #     "config": {
-            #         "size": 8,
-            #         "iterations": iterations,
-            #         "fitness": {
-            #             "function": "multimodal",
-            #             "threshold": 1e-3,
-            #             "target": 0,
-            #         },
-            #         "oracle": {
-            #             "operator": "pattern",
-            #             "expression": "00**1000",
-            #         },
-            #         "gamma": {
-            #             "function": "gaussian",
-            #             "alpha": 0.175,
-            #         },
-            #         "recombination": {
-            #             "k_out": 8,
-            #             "prob": 0.5,
-            #             "enabled": True,
-            #             "type": "contribution",
-            #             "args": {"uniform_accuracy": 0.75},
-            #             "mutate_prob": 0.25,
-            #             "mutate_factor": 0.175,
-            #         },
-            #     },
-            # },
+            {
+                "name": "eqdr_spd",
+                "config": {
+                    "size": size,
+                    "lambda": lmbd,
+                    "iterations": iterations,
+                    "fitness": fitness,
+                    "oracle": oracle,
+                    "recombination": {
+                        "k_out": size,
+                        "prob": 0.6,
+                        "type": "proportional",
+                        "uniform_accuracy": 0.75,
+                        "enabled": True,
+                        "mutate_prob": 0.3,
+                        "mutate_factor": 0.15,
+                    },
+                },
+            },
+            {
+                "name": "eqdr_ud",
+                "config": {
+                    "size": size,
+                    "lambda": lmbd,
+                    "iterations": iterations,
+                    "fitness": fitness,
+                    "oracle": oracle,
+                    "recombination": {
+                        "k_out": size,
+                        "prob": 0.6,
+                        "uniform_accuracy": 0.75,
+                        "type": "uniform",
+                        "enabled": True,
+                        "mutate_prob": 0.3,
+                        "mutate_factor": 0.15,
+                    },
+                },
+            },
+        ],
+    )
+    return
+    oracle = {
+        "operator": "pattern",
+        "expression": "**001000",
+    }
+    execute_eqiro_experiment(
+        id + "_high_precision",
+        [
+            {
+                "name": "bbht",
+                "config": {
+                    "size": size,
+                    "lambda": lmbd,
+                    "iterations": iterations,
+                    "fitness": fitness,
+                    "oracle": oracle,
+                    "recombination": {
+                        "enabled": False,
+                    },
+                },
+            },
+            {
+                "name": "eqdr_rcd",
+                "config": {
+                    "size": size,
+                    "lambda": lmbd,
+                    "iterations": iterations,
+                    "fitness": fitness,
+                    "oracle": oracle,
+                    "recombination": {
+                        "enabled": True,
+                        "k_out": 12,
+                        "prob": 0.6,
+                        "gamma": {
+                            "function": "gaussian",
+                            "alpha": 0.2,
+                        },
+                        "type": "contribution",
+                        "mutate_prob": 0.3,
+                        "mutate_factor": 0.2,
+                    },
+                },
+            },
+            {
+                "name": "eqdr_spd",
+                "config": {
+                    "size": size,
+                    "lambda": lmbd,
+                    "iterations": iterations,
+                    "fitness": fitness,
+                    "oracle": oracle,
+                    "recombination": {
+                        "k_out": 8,
+                        "prob": 0.6,
+                        "type": "proportional",
+                        "uniform_accuracy": 0.75,
+                        "enabled": True,
+                        "mutate_prob": 0.3,
+                        "mutate_factor": 0.15,
+                    },
+                },
+            },
+            {
+                "name": "eqdr_ud",
+                "config": {
+                    "size": size,
+                    "lambda": lmbd,
+                    "iterations": iterations,
+                    "fitness": fitness,
+                    "oracle": oracle,
+                    "recombination": {
+                        "k_out": 6,
+                        "prob": 0.6,
+                        "uniform_accuracy": 0.75,
+                        "type": "uniform",
+                        "enabled": True,
+                        "mutate_prob": 0.3,
+                        "mutate_factor": 0.15,
+                    },
+                },
+            },
         ],
     )
 
@@ -543,7 +588,9 @@ if __name__ == "__main__":
     if len(arguments) < 1:
         exit(1)
     name = arguments[0]
-    # knapsack(name)
-    square_recombination(name)
-    print("-" * 100)
-    multimodal_recombination(name)
+    knapsack_7(name)
+    # square_recombination(name)
+    # print("-" * 100)
+    # multimodal_recombination(name)
+    # alpha(name)
+    # rastrigin(name)

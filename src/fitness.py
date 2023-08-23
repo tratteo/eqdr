@@ -31,7 +31,7 @@ def binary_knapsack_fitness_factory(
             w += int(b) * weights[i]
 
         if w > max_weight:
-            f = 0
+            f = 0.1
         else:
             f = p
         # print(genome + ": " + str(max_weight) + ", " + str(w) + ", f: " + str(f))
@@ -43,6 +43,11 @@ def binary_knapsack_fitness_factory(
 def square_fitness(genome: str, size: int) -> float:
     val = int(genome, 2) - size
     return val * val
+
+
+def rastrigin_fitness(genome: str, size: int) -> float:
+    val = int(genome, 2) - size
+    return (10 + (val**2)) - (10 * math.cos(2 * math.pi * val))
 
 
 def targets_fitness_factory(targets: "list[str]") -> Callable[[str, int], float]:
@@ -69,6 +74,8 @@ def fitness_factory(**kwargs):
         return targets_fitness_factory(kwargs["targets"])
     elif fitnessId == "square":
         return square_fitness
+    elif fitnessId == "rastrigin":
+        return rastrigin_fitness
     elif fitnessId == "binary_knapsack":
         return binary_knapsack_fitness_factory(
             kwargs["weights"], kwargs["max_weight"], kwargs["prices"]

@@ -24,13 +24,6 @@ def g_g(x):
     return np.exp((np.power(x, 2) * np.log(alpha)) / 16)
 
 
-def multimodal_fitness(val, size: int) -> float:
-    k = size
-    numerator = k * np.tanh(((val - k) ** 2) / (2**k))
-    denominator = np.cos(k * (val - k)) + 2
-    return numerator / denominator
-
-
 import random
 
 # bits = [[-1, -1, +1, -1], [-1, -1, +1, +1], [-1, +1, +1, +1]]
@@ -49,18 +42,20 @@ import random
 # from qiskit.quantum_info import Statevector
 
 # diff = "111"
-# qc = QuantumCircuit(3)
+qc = QuantumCircuit(2)
+qc.x(0)
+qc.h(1)
+qc.cz(0, 1)
+qc.h(1)
+qc.x(0)
+
+qc.draw(output="mpl", filename="test.svg")
 # qc.ry(math.pi / 12, 0)
 # qc.ry(math.pi / 2, 1)
 # qc.ry(math.pi / 2, 2)
 # p = AmplificationProblem(
 #     oracle=Statevector.from_label(diff),
 #     is_good_state=[diff],
-# )
-# qc.compose(
-#     p.grover_operator.power(math.sqrt(len(diff))),
-#     qubits=p.objective_qubits,
-#     inplace=True,
 # )
 # measurement_cr = ClassicalRegister(len(diff))
 # qc.add_register(measurement_cr)

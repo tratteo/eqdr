@@ -1,99 +1,217 @@
-import math
 import sys
+import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import numpy
 import seaborn as sb
-import matplotlib as mat
 
 
-def ma(interval, window_size):
-    window = numpy.ones(int(window_size)) / float(window_size)
-    return numpy.convolve(interval, window, "same")
+def rastrigin_fitness(genome: str, size: int) -> float:
+    val = genome - size
+    return (10 + np.power(val, 2)) - (10 * np.cos(2 * np.pi * val))
 
 
-def annotate_boxplot(
-    bpdict,
-    annotate_params=None,
-    x_loc=0,
-    text_offset_x=100,
-    text_offset_y=-2.5,
-):
-    """Annotates a matplotlib boxplot with labels marking various centile levels.
+def square_fitness(val, size: int) -> float:
+    v = val - size
+    return np.power(v, 2)
 
-    Parameters:
-    - bpdict: The dict returned from the matplotlib `boxplot` function. If you're using pandas you can
-    get this dict by setting `return_type='dict'` when calling `df.boxplot()`.
-    - annotate_params: Extra parameters for the plt.annotate function. The default setting uses standard arrows
-    and offsets the text based on other parameters passed to the function
-    - x_offset: The offset from the centre of the boxplot to place the heads of the arrows, in x axis
-    units (normally just 0-n for n boxplots). Values between around -0.15 and 0.15 seem to work well
-    - x_loc: The x axis location of the boxplot to annotate. Usually just the number of the boxplot, counting
-    from the left and starting at zero.
-    text_offset_x: The x offset from the arrow head location to place the associated text, in 'figure points' units
-    text_offset_y: The y offset from the arrow head location to place the associated text, in 'figure points' units
-    """
-    if annotate_params is None:
-        annotate_params = dict(
-            xytext=(text_offset_x, text_offset_y),
-            fontsize=12,
-            weight="bold",
-            textcoords="offset points",
+
+def read_data(elems: "list[str]") -> "pd.DataFrame":
+    dataframes = []
+    for e in elems:
+        path = e.split("€")[0]
+        label = e.split("€")[1]
+        d = pd.read_csv(path)
+        d["type"] = label
+        dataframes.append(d)
+    return pd.concat(dataframes)
+
+
+def generate_image(arguments: "list[str]", **kwargs):
+    df = read_data(arguments)
+    length = len(arguments)
+    fontsize = 10 + (length**2)
+    path = kwargs.get("path", None)
+    sb.set_palette(palette="plasma", n_colors=length)
+    sb.set_style(style="whitegrid")
+    fig, ax = plt.subplots(figsize=(6 * length, 4 + (2 * length)))
+
+    bpdict = sb.boxplot(
+        data=df,
+        x="type",
+        hue="type",
+        y="iterations",
+        width=0.5,
+        ax=ax,
+        whis=6,
+        fliersize=0,
+        dodge=False,
+        notch=True,
+        showmeans=True,
+        meanline=True,
+        showbox=False,
+        showfliers=False,
+        showcaps=False,
+        medianprops={"linewidth": 0},
+        whiskerprops={"linewidth": 0},
+        meanprops={"linewidth": 1, "color": "black"},
+    )
+    bpdict.tick_params(labelsize=fontsize)
+    means = df.groupby(["type"])["iterations"].mean()
+    vertical_offset = df["iterations"].max() * 0.01
+    for i, xtick in enumerate(ax.get_xticklabels()):
+        y = means[xtick.get_text()]
+        bpdict.text(
+            i + 0.2,
+            y + vertical_offset,
+            y,
+            horizontalalignment="center",
+            size=fontsize,
+            color="black",
+            weight="normal",
         )
+    ylims = ax.get_ylim()
+    ax = sb.violinplot(
+        data=df,
+        y="iterations",
+        x="type",
+        hue="type",
+        dodge=False,
+        legend=False,
+        linewidth=0,
+        ax=ax,
+    )
+    for violin in ax.collections:
+        violin.set_alpha(0.45)
+    ax = sb.stripplot(
+        data=df,
+        y="iterations",
+        x="type",
+        hue="type",
+        zorder=1,
+        jitter=0.1,
+        size=4 * length,
+        legend=False,
+        ax=ax,
+        alpha=0.5,
+    )
 
-    plt.annotate(
-        bpdict["means"][x_loc].get_ydata()[0],
-        (x_loc + 1, bpdict["means"][x_loc].get_ydata()[0]),
-        **annotate_params
+    ax.set(ylim=ylims)
+    ax.set_ylabel("Generations", fontsize=fontsize)
+    ax.set_xlabel("")
+    plt.legend([], [], frameon=False)
+    plt.tight_layout()
+    if path is not None:
+        plt.savefig(path)
+    else:
+        plt.show()
+
+
+def regenerate_all():
+    generate_image(
+        [
+            r"results\knapsack_7\diffusion_recombined_poly.csv,EQDR",
+            r"results\knapsack_7\not_recombined.csv,BBHT",
+        ],
+        path=r"C:\Users\matteo\Documents\UniTn\Tesi\assets\boxplots_7_knapsack.svg",
+    )
+    generate_image(
+        [
+            r"results\recombination_type\square_contribution.csv,RCD",
+            r"results\recombination_type\square_proportional.csv,SPD",
+            r"results\recombination_type\square_uniform.csv,UD",
+        ],
+        path=r"C:\Users\matteo\Documents\UniTn\Tesi\assets\recombination_square.svg",
+    )
+    generate_image(
+        [
+            r"results\recombination_type\multimodal_contribution.csv,RCD",
+            r"results\recombination_type\multimodal_proportional.csv,SPD",
+            r"results\recombination_multimodal\multimodal_uniform.csv,UD",
+        ],
+        path=r"C:\Users\matteo\Documents\UniTn\Tesi\assets\recombination_multimodal.svg",
+    )
+    generate_image(
+        [
+            r"results\rastrigin_4\recombined.csv,EQDR",
+            r"results\rastrigin_4\not_recombined.csv,BBHT",
+        ],
+        path=r"C:\Users\matteo\Documents\UniTn\Tesi\assets\4_qubits.svg",
+    )
+    generate_image(
+        [
+            r"results\rastrigin\recombined_tweaked.csv,EQDR",
+            r"results\rastrigin\not_recombined.csv,BBHT",
+        ],
+        path=r"C:\Users\matteo\Documents\UniTn\Tesi\assets\8_qubits.svg",
+    )
+    generate_image(
+        [
+            r"results\alpha\gaussian_highalpha.csv,$\alpha_g = 0.775$",
+            r"results\alpha\gaussian_lowalpha.csv,$\alpha_g = 0.055$",
+        ],
+        path=r"C:\Users\matteo\Documents\UniTn\Tesi\assets\gaussian_alpha.svg",
+    )
+    generate_image(
+        [
+            r"results\alpha\poly_highalpha.csv,$\alpha_p = 0.975$",
+            r"results\alpha\poly_lowalpha.csv,$\alpha_p = 0.75$",
+        ],
+        path=r"C:\Users\matteo\Documents\UniTn\Tesi\assets\poly_alpha.svg",
     )
 
 
 if __name__ == "__main__":
-    sb.set_palette(palette="magma", n_colors=2)
-    sb.set_style(style="ticks")
+    # generate_image(
+    #     [
+    #         r"results\knapsack_7_gamma\gaussian_rcd_high.csv€$\alpha_g=0.775, |B|=14$",
+    #         r"results\knapsack_7_gamma\gaussian_rcd_low.csv€$\alpha_g=0.055, |B|=3$",
+    #     ],
+    #     path=r"C:\Users\matteo\Documents\UniTn\Tesi\assets\gaussian_gamma.svg",
+    # )
+    # generate_image(
+    #     [
+    #         r"results\knapsack_7_gamma\poly_rcd_high.csv€$\alpha_p=0.975, |B|=14$",
+    #         r"results\knapsack_7_gamma\poly_rcd_low.csv€$\alpha_p=0.75, |B|=3$",
+    #     ],
+    #     path=r"C:\Users\matteo\Documents\UniTn\Tesi\assets\poly_gamma.svg",
+    # )
+    arguments = sys.argv.copy()
+    arguments.pop(0)
+    sb.set_style(style="whitegrid")
+    if arguments[0] == "all":
+        regenerate_all()
+    elif arguments[0] == "multimodal_func":
+        fig, ax = plt.subplots(figsize=(12, 8))
+        size = float(arguments[1])
+        if len(arguments) > 1:
+            path = arguments[2]
+        x = np.linspace(0, 2 * size, 1000)
+        y = rastrigin_fitness(x, size)
+        # plt.plot(x, y)
+        ax = sb.lineplot(x=x, y=y)
+        ax.axvline(size, color="orange", ls="--")
+        ax.tick_params(labelsize=14)
+        plt.tight_layout()
+        if path is not None:
+            plt.savefig(path)
+        else:
+            plt.show()
 
-    # df = pd.DataFrame()
-    # df["recombined"] = pd.read_csv(r"results\square_7\diffusion_recombined_poly.csv")
-    # df["not_recombined"] = pd.read_csv(r"results\square_7\not_recombined.csv")
-    # df = [
-    #     pd.read_csv(r"results\square_7\diffusion_recombined_poly.csv"),
-    #     pd.read_csv(r"results\square_7\not_recombined.csv"),
-    # ]
-
-    df0 = pd.read_csv(r"results\knapsack_7\diffusion_recombined_poly.csv").assign(
-        type="EQDR"
-    )
-    df1 = pd.read_csv(r"results\knapsack_7\not_recombined.csv").assign(type="BBHT")
-    cdf = pd.concat([df0, df1])
-    # mdf = pd.melt(cdf, id_vars=["type"], var_name=["typology"])
-    print(cdf)
-    fig = plt.figure(figsize=(12, 8))
-    ax = fig.add_subplot()
-    # print(mdf)
-    bpdict = ax.boxplot(
-        x=[df0["iterations"], df1["iterations"]],
-        notch=False,
-        widths=0.5,
-        sym="",
-        labels=["EQDR", "BBHT"],
-        showmeans=True,
-        meanline=True,
-        showcaps=False,
-        boxprops={"linewidth": 2},
-        medianprops={"color": (0, 0.2, 1, 1), "linewidth": 0},
-        whiskerprops={"color": (0.15, 0.15, 0.15, 1), "linewidth": 2},
-        meanprops={"color": (0, 0.35, 1, 1), "linewidth": 2},
-    )
-    ax.set_ylabel("Generations")
-    annotate_boxplot(bpdict, x_loc=1)
-    annotate_boxplot(bpdict, x_loc=0)
-    # sb.boxplot(
-    #     y=cdf["iterations"],
-    #     x=cdf["type"],
-    #     fliersize=2,
-    #     showfliers=False,
-    # ).set(xlabel=None, ylabel="Iterations")
-    # sb.boxplot(y=df["iterations"])
-
-    plt.savefig(r"C:\Users\matteo\Documents\UniTn\Tesi\assets\boxplots_7_knapsack.svg")
-    plt.show()
+    elif arguments[0] == "square":
+        fig, ax = plt.subplots(figsize=(12, 8))
+        size = float(arguments[1])
+        if len(arguments) > 1:
+            path = arguments[2]
+        x = np.linspace(0, 3 * size, 1000)
+        y = square_fitness(x, size)
+        # plt.plot(x, y)
+        ax = sb.lineplot(x=x, y=y)
+        ax.axvline(size, color="orange", ls="--")
+        ax.tick_params(labelsize=14)
+        plt.tight_layout()
+        if path is not None:
+            plt.savefig(path)
+        else:
+            plt.show()
+    else:
+        generate_image(arguments)
