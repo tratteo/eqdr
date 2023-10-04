@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sb
+import os
 
 
 def rastrigin_fitness(genome: str, size: int) -> float:
@@ -55,9 +56,11 @@ def generate_image(arguments: "list[str]", **kwargs):
         whiskerprops={"linewidth": 0},
         meanprops={"linewidth": 1, "color": "black"},
     )
+    fig.canvas.draw()
     bpdict.tick_params(labelsize=fontsize)
     means = df.groupby(["type"])["iterations"].mean()
     vertical_offset = df["iterations"].max() * 0.01
+    print(ax.get_xticklabels())
     for i, xtick in enumerate(ax.get_xticklabels()):
         y = means[xtick.get_text()]
         bpdict.text(
@@ -100,10 +103,11 @@ def generate_image(arguments: "list[str]", **kwargs):
     ax.set_xlabel("")
     plt.legend([], [], frameon=False)
     plt.tight_layout()
+    # os.makedirs(path, exist_ok=True)
     if path is not None:
         plt.savefig(path)
-    else:
-        plt.show()
+    plt.show()
+    # else:
 
 
 def regenerate_all():
@@ -161,23 +165,26 @@ def regenerate_all():
 
 
 if __name__ == "__main__":
+    generate_image(
+        [
+            r"C:\Users\matteo\Documents\UniTn\Tesi\eqiro\results\knapsack_recombination\rcd.csv€RCD",
+            r"C:\Users\matteo\Documents\UniTn\Tesi\eqiro\results\knapsack_recombination\spd.csv€SPD",
+            r"C:\Users\matteo\Documents\UniTn\Tesi\eqiro\results\knapsack_recombination\ud.csv€UD",
+        ],
+        path=r"C:\Users\matteo\Documents\UniTn\Tesi\assets\knapsack.svg",
+    )
     # generate_image(
     #     [
-    #         r"results\knapsack_7_gamma\gaussian_rcd_high.csv€$\alpha_g=0.775, |B|=14$",
-    #         r"results\knapsack_7_gamma\gaussian_rcd_low.csv€$\alpha_g=0.055, |B|=3$",
-    #     ],
-    #     path=r"C:\Users\matteo\Documents\UniTn\Tesi\assets\gaussian_gamma.svg",
-    # )
-    # generate_image(
-    #     [
-    #         r"results\knapsack_7_gamma\poly_rcd_high.csv€$\alpha_p=0.975, |B|=14$",
-    #         r"results\knapsack_7_gamma\poly_rcd_low.csv€$\alpha_p=0.75, |B|=3$",
+    #         r"results\exploration\poly_high_exp.csv€$\alpha_p=0.975, |B|=14$",
+    #         r"results\exploration\poly_low_exp.csv€$\alpha_p=0.5, |B|=4$",
     #     ],
     #     path=r"C:\Users\matteo\Documents\UniTn\Tesi\assets\poly_gamma.svg",
     # )
+    exit(1)
     arguments = sys.argv.copy()
     arguments.pop(0)
     sb.set_style(style="whitegrid")
+
     if arguments[0] == "all":
         regenerate_all()
     elif arguments[0] == "multimodal_func":
@@ -186,16 +193,20 @@ if __name__ == "__main__":
         if len(arguments) > 1:
             path = arguments[2]
         x = np.linspace(0, 2 * size, 1000)
+        x_i = np.array([int(i) for i in range(int(size) * 2 + 1)])
         y = rastrigin_fitness(x, size)
+        y_i = rastrigin_fitness(x_i, size)
         # plt.plot(x, y)
         ax = sb.lineplot(x=x, y=y)
-        ax.axvline(size, color="orange", ls="--")
+        ax.axvline(size, ls="--")
         ax.tick_params(labelsize=14)
+        ax.plot(x_i, y_i)
+        for w, z in zip(x_i, y_i):
+            ax.plot(w, z, "o", color="#bf3982")
         plt.tight_layout()
         if path is not None:
             plt.savefig(path)
-        else:
-            plt.show()
+        plt.show()
 
     elif arguments[0] == "square":
         fig, ax = plt.subplots(figsize=(12, 8))
