@@ -1,12 +1,10 @@
 import json
 from multiprocessing import Process
 import os
-import random
-
 from src.eqdr.eqdr_run import eqdr_run
 
 
-def execute_eqiro_experiment(name: str, workers: "list[any]"):
+def execute_eqdr_experiment(name: str, workers: "list[any]"):
     root = os.path.join("results", name)
     if not os.path.exists(root):
         os.makedirs(root)

@@ -4,6 +4,16 @@ from src.fitness import fitness_factory
 from src.oracles import oracles_factory
 
 
+class EqdrResult:
+    def __init__(
+        self,
+        solutions: "list[tuple[str, float]]",
+        statistics: any,
+    ) -> None:
+        self.solutions: list[tuple[str, float]] = solutions
+        self.statistics = statistics
+
+
 def eqdr_run(config: any):
     n = config["size"]
     targets = config.get("targets", None)
@@ -32,7 +42,7 @@ def eqdr_run(config: any):
                 "avg_recombinations",
             ]
         )
-    eqiro = Eqdr(
+    eqdr = Eqdr(
         oracleImp=oracle,
         fitnessFunctionImp=fitness_function,
         isGoodState=lambda x: x in targets if targets is not None else None,
@@ -41,7 +51,7 @@ def eqdr_run(config: any):
     iterations = 0
     recombinations = 0
     for j in range(its):
-        res = eqiro.optimize()
+        res = eqdr.optimize()
         iterations += res.statistics["iterations"]
         recombinations += res.statistics["recombinations"]
         count += 1
@@ -66,6 +76,3 @@ def eqdr_run(config: any):
                     recombinations / (j + 1),
                 ]
             )
-    # iterations /= its
-    # fitnessCalls /= its
-    # recombinations /= its

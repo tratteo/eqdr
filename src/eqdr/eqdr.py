@@ -4,7 +4,7 @@ from qiskit import QuantumCircuit, ClassicalRegister, execute
 import random
 from qiskit.quantum_info import Statevector
 from qiskit import Aer
-from src.eqdr.eqdr_result import EqdrResult
+from src.eqdr.eqdr_run import EqdrResult
 from src.gamma import gaussianGamma, identityGamma, polyGamma
 from qiskit.algorithms import AmplificationProblem
 

@@ -1,6 +1,4 @@
-import math
 from qiskit.quantum_info import Statevector
-from qiskit import QuantumCircuit
 from qiskit.circuit.library.phase_oracle import PhaseOracle
 from qiskit.visualization import *
 
