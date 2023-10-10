@@ -4,9 +4,18 @@ from qiskit import QuantumCircuit, ClassicalRegister, execute
 import random
 from qiskit.quantum_info import Statevector
 from qiskit import Aer
-from src.eqdr.eqdr_run import EqdrResult
 from src.gamma import gaussianGamma, identityGamma, polyGamma
 from qiskit.algorithms import AmplificationProblem
+
+
+class EqdrResult:
+    def __init__(
+        self,
+        solutions: "list[tuple[str, float]]",
+        statistics: any,
+    ) -> None:
+        self.solutions: list[tuple[str, float]] = solutions
+        self.statistics = statistics
 
 
 class Eqdr:

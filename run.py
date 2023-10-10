@@ -1,5 +1,6 @@
 import sys
-from src.experiment import execute_eqdr_experiment
+
+from src.eqdr.eqdr_run import execute_eqdr_experiment
 
 
 iterations = 100
