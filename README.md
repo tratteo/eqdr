@@ -38,7 +38,7 @@ lmbd = 1.2
 
 # Read the eqdr.pdf thesis file to know the different parameters
 
-execute_eqiro_experiment(
+execute_eqdr_experiment(
     experiment_name,
     [
         {
