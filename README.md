@@ -1,6 +1,7 @@
 ## Elite Quantum Diffusion Recombination
 
 Adapting Grover's Quantum Search algorithm to fitness based multimodal optimization problems.
+Devising a novel recombination procedure for a hybrid Quantum Evolutionary Algorithm.
 
 **Document**: [EQDR: an Elite Quantum Diffusion Recombination procedure](https://github.com/tratteo/eqdr/blob/main/eqdr.pdf)
 
